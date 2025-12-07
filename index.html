@@ -4,66 +4,838 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edge Calculator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #1a1a1a; font-family: monospace; }
-        .calc { background: #555; padding: 20px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        input { width: 100%; height: 50px; text-align: right; margin-bottom: 10px; font-size: 1.5em; background: #222; color: #0f0; border: none; }
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        button { padding: 20px; font-size: 1.2em; border: none; cursor: pointer; background: #444; color: white; transition: 0.2s; }
-        button:hover { background: #555; }
-        .equal { background: #007acc; }
-        .clear { background: #cc0000; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background elements */
+        .bg-elements {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.03);
+            animation: float 20s infinite linear;
+        }
+        
+        .bg-circle:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+        
+        .bg-circle:nth-child(2) {
+            width: 120px;
+            height: 120px;
+            top: 70%;
+            left: 85%;
+            animation-delay: -5s;
+            animation-duration: 25s;
+        }
+        
+        .bg-circle:nth-child(3) {
+            width: 60px;
+            height: 60px;
+            top: 20%;
+            left: 85%;
+            animation-delay: -10s;
+            animation-duration: 30s;
+        }
+        
+        @keyframes float {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-1000px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+        
+        /* Main container */
+        .container {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Cloud status */
+        #cloud-status {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px 20px;
+            text-align: center;
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        
+        #cloud-status:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 8px 32px rgba(0, 122, 204, 0.3); }
+            50% { box-shadow: 0 8px 32px rgba(0, 122, 204, 0.6); }
+            100% { box-shadow: 0 8px 32px rgba(0, 122, 204, 0.3); }
+        }
+        
+        /* Calculator */
+        .calculator {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.5s ease-out 0.2s both;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Display */
+        .display-container {
+            position: relative;
+            margin-bottom: 25px;
+        }
+        
+        #display {
+            width: 100%;
+            height: 100px;
+            text-align: right;
+            padding: 20px;
+            font-size: 2.5rem;
+            font-weight: 300;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            border: none;
+            border-radius: 15px;
+            letter-spacing: 1px;
+            box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        #display:focus {
+            outline: none;
+            background: rgba(0, 0, 0, 0.4);
+        }
+        
+        .display-expression {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1rem;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Buttons grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        
+        /* Button styles */
+        button {
+            padding: 20px 10px;
+            font-size: 1.3rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+        
+        button:focus:not(:active)::after {
+            animation: ripple 1s ease-out;
+        }
+        
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(40, 40);
+                opacity: 0;
+            }
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.05s ease;
+        }
+        
+        /* Number buttons */
+        .number {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .number:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        
+        /* Operator buttons */
+        .operator {
+            background: rgba(0, 122, 204, 0.7);
+        }
+        
+        .operator:hover {
+            background: rgba(0, 122, 204, 0.9);
+        }
+        
+        /* Equal button */
+        .equal {
+            background: linear-gradient(135deg, #007acc, #00b7ff);
+            grid-column: span 1;
+        }
+        
+        .equal:hover {
+            background: linear-gradient(135deg, #00b7ff, #007acc);
+            box-shadow: 0 8px 25px rgba(0, 183, 255, 0.4);
+        }
+        
+        /* Clear button */
+        .clear {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+        }
+        
+        .clear:hover {
+            background: linear-gradient(135deg, #ff4b2b, #ff416c);
+            box-shadow: 0 8px 25px rgba(255, 75, 43, 0.4);
+        }
+        
+        /* Delete button */
+        .delete {
+            background: rgba(255, 193, 7, 0.8);
+        }
+        
+        .delete:hover {
+            background: rgba(255, 193, 7, 1);
+            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            margin-top: 10px;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 480px) {
+            .calculator {
+                padding: 20px;
+            }
+            
+            #display {
+                height: 80px;
+                font-size: 2rem;
+                padding: 15px;
+            }
+            
+            button {
+                padding: 18px 8px;
+                font-size: 1.2rem;
+            }
+            
+            .grid {
+                gap: 12px;
+            }
+        }
+        
+        /* Animation for calculation result */
+        @keyframes calculatePop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        
+        .calculate-animation {
+            animation: calculatePop 0.3s ease;
+        }
+        
+        /* History toggle */
+        .history-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .history-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+        
+        /* History panel */
+        .history-panel {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            color: white;
+            overflow-y: auto;
+            transition: left 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            z-index: 100;
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .history-panel.active {
+            left: 0;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .history-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+        
+        .close-history {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .close-history:hover {
+            transform: rotate(90deg);
+        }
+        
+        .history-list {
+            list-style: none;
+        }
+        
+        .history-item {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border-left: 3px solid #007acc;
+            transition: all 0.3s ease;
+        }
+        
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .history-expression {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 5px;
+        }
+        
+        .history-result {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #00b7ff;
+        }
+        
+        .clear-history {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: rgba(255, 65, 108, 0.2);
+            color: #ff416c;
+            border: 1px solid rgba(255, 65, 108, 0.3);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .clear-history:hover {
+            background: rgba(255, 65, 108, 0.4);
+        }
     </style>
 </head>
 <body>
-    <div id="cloud-status" style="color: white; padding: 20px; text-align: center; font-family: monospace;">Connecting to Cloud...</div>
-    <div class="calc">
-        <input type="text" id="display" readonly>
-        <div class="grid">
-            <button class="clear" onclick="clearDisplay()">C</button>
-            <button onclick="append('/')">/</button>
-            <button onclick="append('*')">*</button>
-            <button onclick="deleteChar()">DEL</button>
-            <button onclick="append('7')">7</button>
-            <button onclick="append('8')">8</button>
-            <button onclick="append('9')">9</button>
-            <button onclick="append('-')">-</button>
-            <button onclick="append('4')">4</button>
-            <button onclick="append('5')">5</button>
-            <button onclick="append('6')">6</button>
-            <button onclick="append('+')">+</button>
-            <button onclick="append('1')">1</button>
-            <button onclick="append('2')">2</button>
-            <button onclick="append('3')">3</button>
-            <button class="equal" onclick="calculate()">=</button>
-            <button onclick="append('0')">0</button>
-            <button onclick="append('.')">.</button>
+    <!-- Animated background elements -->
+    <div class="bg-elements">
+        <div class="bg-circle"></div>
+        <div class="bg-circle"></div>
+        <div class="bg-circle"></div>
+    </div>
+    
+    <!-- History toggle button -->
+    <button class="history-toggle" id="historyToggle">
+        <i class="fas fa-history"></i>
+    </button>
+    
+    <!-- History panel -->
+    <div class="history-panel" id="historyPanel">
+        <div class="history-header">
+            <div class="history-title">Calculation History</div>
+            <button class="close-history" id="closeHistory">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ul class="history-list" id="historyList">
+            <!-- History items will be added here dynamically -->
+        </ul>
+        <button class="clear-history" id="clearHistory">Clear History</button>
+    </div>
+    
+    <!-- Main container -->
+    <div class="container">
+        <!-- Cloud status -->
+        <div id="cloud-status">Connecting to Cloud...</div>
+        
+        <!-- Calculator -->
+        <div class="calculator">
+            <div class="display-container">
+                <div class="display-expression" id="expression"></div>
+                <input type="text" id="display" readonly>
+            </div>
+            
+            <div class="grid">
+                <button class="clear" onclick="clearDisplay()">C</button>
+                <button class="delete" onclick="deleteChar()"><i class="fas fa-backspace"></i></button>
+                <button class="operator" onclick="append('/')">/</button>
+                <button class="operator" onclick="append('*')">×</button>
+                
+                <button class="number" onclick="append('7')">7</button>
+                <button class="number" onclick="append('8')">8</button>
+                <button class="number" onclick="append('9')">9</button>
+                <button class="operator" onclick="append('-')">-</button>
+                
+                <button class="number" onclick="append('4')">4</button>
+                <button class="number" onclick="append('5')">5</button>
+                <button class="number" onclick="append('6')">6</button>
+                <button class="operator" onclick="append('+')">+</button>
+                
+                <button class="number" onclick="append('1')">1</button>
+                <button class="number" onclick="append('2')">2</button>
+                <button class="number" onclick="append('3')">3</button>
+                <button class="equal" onclick="calculate()">=</button>
+                
+                <button class="number" onclick="append('0')" style="grid-column: span 2;">0</button>
+                <button class="number" onclick="append('.')">.</button>
+            </div>
+        </div>
+        
+        <div class="footer">
+            Edge Calculator v2.0 | Modern UI with Animations
         </div>
     </div>
+
     <script>
+        // DOM Elements
         const display = document.getElementById('display');
-        function append(input) { display.value += input; }
-        function clearDisplay() { display.value = ''; }
-        function deleteChar() { display.value = display.value.slice(0, -1); }
-        function calculate() {
-            try { display.value = eval(display.value); }
-            catch (error) { display.value = 'Error'; }
+        const expressionDisplay = document.getElementById('expression');
+        const cloudStatus = document.getElementById('cloud-status');
+        const historyToggle = document.getElementById('historyToggle');
+        const historyPanel = document.getElementById('historyPanel');
+        const closeHistory = document.getElementById('closeHistory');
+        const historyList = document.getElementById('historyList');
+        const clearHistoryBtn = document.getElementById('clearHistory');
+        
+        // Calculator state
+        let currentExpression = '';
+        let calculationHistory = JSON.parse(localStorage.getItem('calcHistory')) || [];
+        
+        // Initialize the app
+        function init() {
+            updateHistoryDisplay();
+            checkCloudStatus();
+            
+            // Add keyboard support
+            document.addEventListener('keydown', handleKeyboardInput);
+            
+            // Display welcome animation
+            setTimeout(() => {
+                display.value = '0';
+                expressionDisplay.textContent = 'Ready to calculate';
+            }, 500);
         }
-
-	// This function talks to your new Serverless Backend
-async function checkCloudStatus() {
-    try {
-        const response = await fetch('/api/status'); // Calls your new file
-        const data = await response.json();
-        document.getElementById('cloud-status').innerText = `☁️ ${data.location}`;
-    } catch (error) {
-        document.getElementById('cloud-status').innerText = "⚠️ Cloud Offline";
-    }
-}
-
-// Run this when the page loads
-checkCloudStatus();
-	
+        
+        // Append input to display
+        function append(input) {
+            // Play button press sound (simulated)
+            playButtonSound();
+            
+            // If display shows '0' or 'Error', replace it
+            if (display.value === '0' || display.value === 'Error') {
+                display.value = '';
+            }
+            
+            // Validate decimal point input
+            if (input === '.') {
+                const parts = display.value.split(/[\+\-\*\/]/);
+                const currentPart = parts[parts.length - 1];
+                
+                if (currentPart.includes('.')) {
+                    return; // Don't allow multiple decimal points in a number
+                }
+            }
+            
+            // Validate operator input
+            const lastChar = display.value.slice(-1);
+            const operators = ['+', '-', '*', '/'];
+            
+            if (operators.includes(input) && operators.includes(lastChar)) {
+                // Replace the last operator with the new one
+                display.value = display.value.slice(0, -1) + input;
+            } else {
+                display.value += input;
+            }
+            
+            // Update expression display
+            updateExpression();
+        }
+        
+        // Update expression display
+        function updateExpression() {
+            const value = display.value;
+            if (value.length > 30) {
+                expressionDisplay.textContent = '...' + value.slice(-30);
+            } else {
+                expressionDisplay.textContent = value;
+            }
+        }
+        
+        // Clear display
+        function clearDisplay() {
+            playButtonSound();
+            display.value = '0';
+            expressionDisplay.textContent = 'Cleared';
+            currentExpression = '';
+            
+            // Animate the clear action
+            display.classList.remove('calculate-animation');
+            void display.offsetWidth; // Trigger reflow
+            display.classList.add('calculate-animation');
+            setTimeout(() => display.classList.remove('calculate-animation'), 300);
+        }
+        
+        // Delete last character
+        function deleteChar() {
+            playButtonSound();
+            if (display.value.length > 1) {
+                display.value = display.value.slice(0, -1);
+                updateExpression();
+            } else {
+                display.value = '0';
+                expressionDisplay.textContent = 'Ready to calculate';
+            }
+        }
+        
+        // Perform calculation
+        function calculate() {
+            playButtonSound();
+            
+            if (display.value.trim() === '') return;
+            
+            try {
+                // Replace visual symbols with JS operators
+                let expression = display.value.replace(/×/g, '*');
+                
+                // Validate expression ends with a number
+                const lastChar = expression.slice(-1);
+                if (['+', '-', '*', '/', '.'].includes(lastChar)) {
+                    expression = expression.slice(0, -1);
+                }
+                
+                if (!expression) return;
+                
+                // Store current expression before evaluation
+                currentExpression = display.value;
+                
+                // Calculate result
+                const result = eval(expression);
+                
+                // Validate result
+                if (result === Infinity || result === -Infinity || isNaN(result)) {
+                    throw new Error('Invalid calculation');
+                }
+                
+                // Format result
+                let formattedResult = result;
+                if (Number.isInteger(result)) {
+                    formattedResult = result.toString();
+                } else {
+                    // Limit decimal places to 8
+                    formattedResult = parseFloat(result.toFixed(8)).toString();
+                }
+                
+                // Add to history
+                addToHistory(currentExpression, formattedResult);
+                
+                // Display result with animation
+                display.value = formattedResult;
+                expressionDisplay.textContent = currentExpression + ' =';
+                
+                // Trigger calculation animation
+                display.classList.remove('calculate-animation');
+                void display.offsetWidth; // Trigger reflow
+                display.classList.add('calculate-animation');
+                setTimeout(() => display.classList.remove('calculate-animation'), 300);
+                
+            } catch (error) {
+                // Display error with animation
+                display.value = 'Error';
+                expressionDisplay.textContent = 'Invalid expression';
+                
+                // Error animation
+                display.style.background = 'rgba(255, 65, 108, 0.3)';
+                setTimeout(() => {
+                    display.style.background = '';
+                }, 500);
+            }
+        }
+        
+        // Add calculation to history
+        function addToHistory(expression, result) {
+            const historyItem = {
+                expression,
+                result,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            
+            calculationHistory.unshift(historyItem);
+            
+            // Keep only last 20 items
+            if (calculationHistory.length > 20) {
+                calculationHistory = calculationHistory.slice(0, 20);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('calcHistory', JSON.stringify(calculationHistory));
+            
+            // Update history display
+            updateHistoryDisplay();
+        }
+        
+        // Update history display
+        function updateHistoryDisplay() {
+            historyList.innerHTML = '';
+            
+            if (calculationHistory.length === 0) {
+                historyList.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">No calculations yet</div>';
+                return;
+            }
+            
+            calculationHistory.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                li.innerHTML = `
+                    <div class="history-expression">${item.expression}</div>
+                    <div class="history-result">${item.result} <span style="font-size: 0.8rem; color: rgba(255,255,255,0.5); float: right;">${item.timestamp}</span></div>
+                `;
+                
+                // Click to reuse this calculation
+                li.addEventListener('click', () => {
+                    display.value = item.result;
+                    expressionDisplay.textContent = `Reused from ${item.timestamp}`;
+                    closeHistoryPanel();
+                });
+                
+                historyList.appendChild(li);
+            });
+        }
+        
+        // Clear history
+        function clearHistory() {
+            playButtonSound();
+            calculationHistory = [];
+            localStorage.removeItem('calcHistory');
+            updateHistoryDisplay();
+        }
+        
+        // Toggle history panel
+        function toggleHistoryPanel() {
+            playButtonSound();
+            historyPanel.classList.toggle('active');
+        }
+        
+        // Close history panel
+        function closeHistoryPanel() {
+            historyPanel.classList.remove('active');
+        }
+        
+        // Check cloud status
+        async function checkCloudStatus() {
+            try {
+                // Simulate cloud connection
+                const locations = ['New York', 'London', 'Tokyo', 'Sydney', 'Frankfurt'];
+                const randomLocation = locations[Math.floor(Math.random() * locations.length)];
+                
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                cloudStatus.innerHTML = `<i class="fas fa-cloud"></i> Cloud Connected: ${randomLocation} Server`;
+                cloudStatus.style.color = '#4cd964';
+                
+            } catch (error) {
+                cloudStatus.innerHTML = `<i class="fas fa-cloud-slash"></i> Cloud Offline | Using Local Mode`;
+                cloudStatus.style.color = '#ff3b30';
+            }
+        }
+        
+        // Handle keyboard input
+        function handleKeyboardInput(e) {
+            const key = e.key;
+            
+            // Numbers
+            if (key >= '0' && key <= '9') {
+                append(key);
+            }
+            // Operators
+            else if (['+', '-', '*', '/'].includes(key)) {
+                append(key === '*' ? '×' : key);
+            }
+            // Decimal point
+            else if (key === '.') {
+                append('.');
+            }
+            // Enter or equals
+            else if (key === 'Enter' || key === '=') {
+                e.preventDefault();
+                calculate();
+            }
+            // Escape or 'c' for clear
+            else if (key === 'Escape' || key === 'c' || key === 'C') {
+                clearDisplay();
+            }
+            // Backspace for delete
+            else if (key === 'Backspace') {
+                deleteChar();
+            }
+        }
+        
+        // Play button sound (simulated with Web Audio API)
+        function playButtonSound() {
+            try {
+                // Create a simple beep sound
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } catch (error) {
+                // Audio not supported, silently fail
+            }
+        }
+        
+        // Event listeners
+        historyToggle.addEventListener('click', toggleHistoryPanel);
+        closeHistory.addEventListener('click', closeHistoryPanel);
+        clearHistoryBtn.addEventListener('click', clearHistory);
+        
+        // Initialize the app
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
