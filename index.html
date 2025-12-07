@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edge Calculator</title>
+    <title>Edge Calculator with Cloudflare Functions</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -93,7 +93,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Cloud status */
+        /* Cloud status with enhanced design */
         #cloud-status {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
@@ -108,6 +108,9 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
             animation: pulse 2s infinite;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
         
         #cloud-status:hover {
@@ -115,10 +118,111 @@
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
         }
         
+        #cloud-status:active {
+            transform: translateY(0);
+        }
+        
+        #cloud-status.loading {
+            animation: loadingPulse 1.5s infinite;
+        }
+        
+        @keyframes loadingPulse {
+            0% { box-shadow: 0 8px 32px rgba(0, 122, 204, 0.3); }
+            50% { box-shadow: 0 8px 32px rgba(0, 122, 204, 0.8); }
+            100% { box-shadow: 0 8px 32px rgba(0, 122, 204, 0.3); }
+        }
+        
         @keyframes pulse {
             0% { box-shadow: 0 8px 32px rgba(0, 122, 204, 0.3); }
             50% { box-shadow: 0 8px 32px rgba(0, 122, 204, 0.6); }
             100% { box-shadow: 0 8px 32px rgba(0, 122, 204, 0.3); }
+        }
+        
+        .cloud-icon {
+            margin-right: 10px;
+            animation: cloudFloat 3s infinite ease-in-out;
+        }
+        
+        @keyframes cloudFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        
+        .connection-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+        
+        .connection-dot.connected {
+            background-color: #4cd964;
+            box-shadow: 0 0 10px #4cd964;
+        }
+        
+        .connection-dot.disconnected {
+            background-color: #ff3b30;
+            box-shadow: 0 0 10px #ff3b30;
+        }
+        
+        .connection-dot.connecting {
+            background-color: #ffcc00;
+            box-shadow: 0 0 10px #ffcc00;
+            animation: connectingPulse 1s infinite;
+        }
+        
+        @keyframes connectingPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        /* Edge Info Panel */
+        .edge-info {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            margin-top: 10px;
+            display: none;
+            animation: slideDown 0.5s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .edge-info.active {
+            display: block;
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .edge-info h3 {
+            margin-bottom: 15px;
+            color: #00b7ff;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .edge-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .edge-info-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .edge-info-value {
+            font-weight: 500;
+            color: #4cd964;
         }
         
         /* Calculator */
@@ -449,6 +553,45 @@
         .clear-history:hover {
             background: rgba(255, 65, 108, 0.4);
         }
+        
+        /* API Call Status */
+        .api-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            animation: slideInRight 0.5s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .api-status.hidden {
+            display: none;
+        }
+        
+        .api-status.success {
+            border-left: 4px solid #4cd964;
+        }
+        
+        .api-status.error {
+            border-left: 4px solid #ff3b30;
+        }
+        
+        .api-status.loading {
+            border-left: 4px solid #ffcc00;
+        }
     </style>
 </head>
 <body>
@@ -463,6 +606,12 @@
     <button class="history-toggle" id="historyToggle">
         <i class="fas fa-history"></i>
     </button>
+    
+    <!-- API Status Indicator -->
+    <div class="api-status hidden" id="apiStatus">
+        <i class="fas fa-sync-alt fa-spin"></i>
+        <span>Calling Edge Function...</span>
+    </div>
     
     <!-- History panel -->
     <div class="history-panel" id="historyPanel">
@@ -480,8 +629,42 @@
     
     <!-- Main container -->
     <div class="container">
-        <!-- Cloud status -->
-        <div id="cloud-status">Connecting to Cloud...</div>
+        <!-- Cloud status with click to show details -->
+        <div id="cloud-status" onclick="toggleEdgeInfo()">
+            <i class="fas fa-cloud cloud-icon"></i>
+            <span id="cloud-status-text">Connecting to Cloudflare Edge...</span>
+            <span class="connection-dot connecting" id="connectionDot"></span>
+        </div>
+        
+        <!-- Edge Information Panel -->
+        <div class="edge-info" id="edgeInfo">
+            <h3><i class="fas fa-server"></i> Edge Connection Details</h3>
+            <div class="edge-info-item">
+                <span class="edge-info-label">Location:</span>
+                <span class="edge-info-value" id="edgeLocation">Fetching...</span>
+            </div>
+            <div class="edge-info-item">
+                <span class="edge-info-label">Country:</span>
+                <span class="edge-info-value" id="edgeCountry">Fetching...</span>
+            </div>
+            <div class="edge-info-item">
+                <span class="edge-info-label">Status:</span>
+                <span class="edge-info-value" id="edgeStatus">Connecting</span>
+            </div>
+            <div class="edge-info-item">
+                <span class="edge-info-label">Response Time:</span>
+                <span class="edge-info-value" id="responseTime">-- ms</span>
+            </div>
+            <div class="edge-info-item">
+                <span class="edge-info-label">Last Updated:</span>
+                <span class="edge-info-value" id="lastUpdated">--</span>
+            </div>
+            <div style="text-align: center; margin-top: 15px;">
+                <button onclick="callEdgeFunction()" style="padding: 8px 15px; font-size: 0.9rem; background: rgba(0, 122, 204, 0.7);">
+                    <i class="fas fa-sync-alt"></i> Refresh Connection
+                </button>
+            </div>
+        </div>
         
         <!-- Calculator -->
         <div class="calculator">
@@ -517,7 +700,7 @@
         </div>
         
         <div class="footer">
-            Edge Calculator v2.0 | Modern UI with Animations
+            Edge Calculator v2.0 | Powered by Cloudflare Workers
         </div>
     </div>
 
@@ -526,6 +709,15 @@
         const display = document.getElementById('display');
         const expressionDisplay = document.getElementById('expression');
         const cloudStatus = document.getElementById('cloud-status');
+        const cloudStatusText = document.getElementById('cloud-status-text');
+        const connectionDot = document.getElementById('connectionDot');
+        const edgeInfo = document.getElementById('edgeInfo');
+        const edgeLocation = document.getElementById('edgeLocation');
+        const edgeCountry = document.getElementById('edgeCountry');
+        const edgeStatus = document.getElementById('edgeStatus');
+        const responseTime = document.getElementById('responseTime');
+        const lastUpdated = document.getElementById('lastUpdated');
+        const apiStatus = document.getElementById('apiStatus');
         const historyToggle = document.getElementById('historyToggle');
         const historyPanel = document.getElementById('historyPanel');
         const closeHistory = document.getElementById('closeHistory');
@@ -536,10 +728,176 @@
         let currentExpression = '';
         let calculationHistory = JSON.parse(localStorage.getItem('calcHistory')) || [];
         
+        // Edge API Configuration
+        const edgeAPI = {
+            endpoint: '/api/status', // Your Cloudflare Function endpoint
+            lastCallTime: null,
+            cacheDuration: 30000, // 30 seconds cache
+            cachedData: null,
+            
+            // Method to call the Cloudflare Edge Function
+            async call() {
+                const startTime = Date.now();
+                
+                try {
+                    // Show loading status
+                    this.updateUIStatus('loading', 'Calling Edge Function...');
+                    
+                    // Make the API call to Cloudflare Function
+                    const response = await fetch(this.endpoint, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Cache-Control': 'no-cache'
+                        }
+                    });
+                    
+                    const responseTimeMs = Date.now() - startTime;
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Cache the response
+                    this.cachedData = {
+                        data: data,
+                        timestamp: Date.now()
+                    };
+                    
+                    this.lastCallTime = Date.now();
+                    
+                    // Update UI with successful response
+                    this.updateUIStatus('success', `Connected to ${data.location}`, responseTimeMs, data);
+                    
+                    return data;
+                    
+                } catch (error) {
+                    console.error('Edge API Error:', error);
+                    
+                    // If we have cached data, use it
+                    if (this.cachedData && (Date.now() - this.cachedData.timestamp < this.cacheDuration)) {
+                        this.updateUIStatus('cached', `Using cached data from ${this.cachedData.data.location}`);
+                        return this.cachedData.data;
+                    }
+                    
+                    // Otherwise show error
+                    const responseTimeMs = Date.now() - startTime;
+                    this.updateUIStatus('error', `Connection failed: ${error.message}`, responseTimeMs);
+                    
+                    // Fallback to simulated data
+                    return this.getFallbackData();
+                }
+            },
+            
+            // Update UI based on API call status
+            updateUIStatus(status, message, responseTimeMs = null, data = null) {
+                // Update connection dot
+                connectionDot.className = 'connection-dot';
+                connectionDot.classList.add(status === 'success' || status === 'cached' ? 'connected' : 
+                                          status === 'loading' ? 'connecting' : 'disconnected');
+                
+                // Update status text
+                let statusIcon = '';
+                switch(status) {
+                    case 'success':
+                        statusIcon = '✓';
+                        cloudStatusText.innerHTML = `<span style="color: #4cd964">${message}</span>`;
+                        break;
+                    case 'cached':
+                        statusIcon = '↻';
+                        cloudStatusText.innerHTML = `<span style="color: #ffcc00">${message}</span>`;
+                        break;
+                    case 'loading':
+                        statusIcon = '⟳';
+                        cloudStatusText.innerHTML = `<span style="color: #ffcc00">${message}</span>`;
+                        break;
+                    case 'error':
+                        statusIcon = '✗';
+                        cloudStatusText.innerHTML = `<span style="color: #ff3b30">${message}</span>`;
+                        break;
+                }
+                
+                // Update edge info panel if data is available
+                if (data) {
+                    edgeLocation.textContent = data.location.split('from ')[1] || data.location;
+                    edgeCountry.textContent = data.location.split(', ')[1] || 'Unknown';
+                    edgeStatus.textContent = status === 'success' ? 'Connected' : 
+                                           status === 'cached' ? 'Cached' : 'Error';
+                    edgeStatus.style.color = status === 'success' ? '#4cd964' : 
+                                            status === 'cached' ? '#ffcc00' : '#ff3b30';
+                    
+                    if (responseTimeMs) {
+                        responseTime.textContent = `${responseTimeMs} ms`;
+                        responseTime.style.color = responseTimeMs < 100 ? '#4cd964' : 
+                                                  responseTimeMs < 500 ? '#ffcc00' : '#ff3b30';
+                    }
+                    
+                    lastUpdated.textContent = new Date().toLocaleTimeString();
+                }
+                
+                // Show API status notification
+                this.showApiNotification(status, message, responseTimeMs);
+            },
+            
+            // Show API call notification
+            showApiNotification(status, message, responseTimeMs) {
+                apiStatus.className = 'api-status';
+                apiStatus.classList.add(status);
+                
+                let icon = '';
+                let text = '';
+                
+                switch(status) {
+                    case 'success':
+                        icon = '<i class="fas fa-check-circle"></i>';
+                        text = `Edge response: ${responseTimeMs}ms`;
+                        break;
+                    case 'cached':
+                        icon = '<i class="fas fa-database"></i>';
+                        text = 'Using cached edge data';
+                        break;
+                    case 'loading':
+                        icon = '<i class="fas fa-sync-alt fa-spin"></i>';
+                        text = 'Calling edge function...';
+                        break;
+                    case 'error':
+                        icon = '<i class="fas fa-exclamation-circle"></i>';
+                        text = 'Edge function failed';
+                        break;
+                }
+                
+                apiStatus.innerHTML = `${icon} <span>${text}</span>`;
+                apiStatus.classList.remove('hidden');
+                
+                // Hide notification after 3 seconds (except for errors)
+                if (status !== 'error') {
+                    setTimeout(() => {
+                        apiStatus.classList.add('hidden');
+                    }, 3000);
+                }
+            },
+            
+            // Get fallback data if API fails
+            getFallbackData() {
+                const cities = ['New York', 'London', 'Tokyo', 'Sydney', 'Frankfurt'];
+                const countries = ['USA', 'UK', 'Japan', 'Australia', 'Germany'];
+                const randomIndex = Math.floor(Math.random() * cities.length);
+                
+                return {
+                    message: "Hello from the Cloud Edge! (Fallback Mode)",
+                    location: `You are connecting from ${cities[randomIndex]}, ${countries[randomIndex]}`,
+                    timestamp: new Date().toISOString(),
+                    isFallback: true
+                };
+            }
+        };
+        
         // Initialize the app
         function init() {
             updateHistoryDisplay();
-            checkCloudStatus();
+            callEdgeFunction(); // Initial call to Cloudflare Function
             
             // Add keyboard support
             document.addEventListener('keydown', handleKeyboardInput);
@@ -549,6 +907,26 @@
                 display.value = '0';
                 expressionDisplay.textContent = 'Ready to calculate';
             }, 500);
+            
+            // Auto-refresh edge data every 60 seconds
+            setInterval(callEdgeFunction, 60000);
+        }
+        
+        // Call Cloudflare Edge Function
+        async function callEdgeFunction() {
+            const data = await edgeAPI.call();
+            return data;
+        }
+        
+        // Toggle edge info panel
+        function toggleEdgeInfo() {
+            edgeInfo.classList.toggle('active');
+            
+            // If opening, ensure we have fresh data
+            if (edgeInfo.classList.contains('active') && 
+                (!edgeAPI.cachedData || Date.now() - edgeAPI.cachedData.timestamp > 10000)) {
+                callEdgeFunction();
+            }
         }
         
         // Append input to display
@@ -753,25 +1131,6 @@
         // Close history panel
         function closeHistoryPanel() {
             historyPanel.classList.remove('active');
-        }
-        
-        // Check cloud status
-        async function checkCloudStatus() {
-            try {
-                // Simulate cloud connection
-                const locations = ['New York', 'London', 'Tokyo', 'Sydney', 'Frankfurt'];
-                const randomLocation = locations[Math.floor(Math.random() * locations.length)];
-                
-                // Simulate network delay
-                await new Promise(resolve => setTimeout(resolve, 800));
-                
-                cloudStatus.innerHTML = `<i class="fas fa-cloud"></i> Cloud Connected: ${randomLocation} Server`;
-                cloudStatus.style.color = '#4cd964';
-                
-            } catch (error) {
-                cloudStatus.innerHTML = `<i class="fas fa-cloud-slash"></i> Cloud Offline | Using Local Mode`;
-                cloudStatus.style.color = '#ff3b30';
-            }
         }
         
         // Handle keyboard input
