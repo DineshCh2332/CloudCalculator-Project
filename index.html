@@ -16,6 +16,7 @@
     </style>
 </head>
 <body>
+    <div id="cloud-status" style="color: white; padding: 20px; text-align: center; font-family: monospace;">Connecting to Cloud...</div>
     <div class="calc">
         <input type="text" id="display" readonly>
         <div class="grid">
@@ -48,6 +49,21 @@
             try { display.value = eval(display.value); }
             catch (error) { display.value = 'Error'; }
         }
+
+	// This function talks to your new Serverless Backend
+async function checkCloudStatus() {
+    try {
+        const response = await fetch('/api/status'); // Calls your new file
+        const data = await response.json();
+        document.getElementById('cloud-status').innerText = `☁️ ${data.location}`;
+    } catch (error) {
+        document.getElementById('cloud-status').innerText = "⚠️ Cloud Offline";
+    }
+}
+
+// Run this when the page loads
+checkCloudStatus();
+	
     </script>
 </body>
 </html>
